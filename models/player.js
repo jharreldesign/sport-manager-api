@@ -1,7 +1,22 @@
 const mongoose = require('mongoose');
 
 // Define valid player positions as an enum for validation
-const positions = ['Goalkeeper', 'Forward', 'Defender', 'Midfielder']; // Example positions
+const positions = [
+    'Pitcher',
+    'Catcher',
+    'First Base',
+    'Second Base',
+    'Shortstop',
+    'Third Base',
+    'Left Field',
+    'Center Field',
+    'Right Field',
+    'Designated Hitter',
+    'Goalkeeper', 
+    'Forward', 
+    'Defender', 
+    'Midfielder'
+]; // Example positions
 
 const playerSchema = new mongoose.Schema(
     {

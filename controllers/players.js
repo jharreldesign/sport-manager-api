@@ -49,6 +49,10 @@ router.post(
             const player = await Player.create(req.body);
             player._doc.manager = req.user; // Add manager info if needed
 
+            // Add player to the team's player array (ensure player _id is added)
+            teamData.players.push(player._id);
+            await teamData.save();  // Save the updated team with the new player
+
             // Populate and return the created player with team details
             const populatedPlayer = await Player.findById(player._id).populate('team');
             res.status(201).json(populatedPlayer); // Return the created player with populated team
