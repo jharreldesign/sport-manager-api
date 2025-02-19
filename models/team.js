@@ -30,7 +30,11 @@ const teamSchema = new mongoose.Schema(
     players: [{ 
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'Player' 
-    }],  // Add the players field as an array of ObjectId references to Player model
+    }],
+    stadium_photo: {
+      type: String,
+      required: true
+    },
   },
   { timestamps: true }
 );

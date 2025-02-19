@@ -40,6 +40,11 @@ const scheduleSchema = new mongoose.Schema(
       type: String,
       enum: ['Regular', 'Playoffs', 'Friendly', 'Tournament'],
       default: 'Regular'
+    },
+    location: {  // New field for home or away
+      type: String,
+      enum: ['home', 'away'],
+      required: true
     }
   },
   { timestamps: true }

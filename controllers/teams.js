@@ -6,7 +6,6 @@ const Player = require("../models/player.js");
 const Schedule = require("../models/schedule.js");
 const router = express.Router();
 
-// Middleware to check if user is the team manager
 const checkManager = async (req, res, next) => {
     try {
         const team = await Team.findById(req.params.teamId);
@@ -27,10 +26,9 @@ const checkManager = async (req, res, next) => {
     }
 };
 
-// Route to create a team
 router.post('/', verifyToken, async (req, res) => {
     try {
-        req.body.manager = req.user._id; // Assign the logged-in user as the manager
+        req.body.manager = req.user._id;
         const team = await Team.create(req.body);
 
         await team.populate({
@@ -44,7 +42,6 @@ router.post('/', verifyToken, async (req, res) => {
     }
 });
 
-// Route to get all teams with players and schedules populated
 router.get('/', verifyToken, async (req, res) => {
     try {
         const teams = await Team.find()
@@ -67,7 +64,7 @@ router.get('/', verifyToken, async (req, res) => {
                 path: 'manager',
                 select: 'first_name last_name username'
             })
-            .lean();  // Efficient read
+            .lean();
 
         if (!teams || teams.length === 0) return res.status(404).json({ error: "No teams found." });
 
@@ -77,7 +74,6 @@ router.get('/', verifyToken, async (req, res) => {
     }
 });
 
-// Route to get a team by ID with players and schedules populated
 router.get('/:teamId', verifyToken, async (req, res) => {
     try {
         const team = await Team.findById(req.params.teamId)
@@ -109,7 +105,6 @@ router.get('/:teamId', verifyToken, async (req, res) => {
     }
 });
 
-// Route to update a team (with manager check middleware)
 router.put("/:teamId", verifyToken, checkManager, async (req, res) => {
     try {
         const updatedTeam = await Team.findByIdAndUpdate(
@@ -129,14 +124,12 @@ router.put("/:teamId", verifyToken, checkManager, async (req, res) => {
     }
 });
 
-// Route to delete a team and free up players (with manager check middleware)
 router.delete('/:teamId', verifyToken, checkManager, async (req, res) => {
     try {
         const deletedTeam = await Team.findByIdAndDelete(req.params.teamId);
-        
+
         if (!deletedTeam) return res.status(404).json({ error: "Team not found" });
 
-        // Remove the team's association with any players
         await Player.updateMany({ team: deletedTeam._id }, { $set: { team: null } });
 
         res.status(200).json(deletedTeam);
@@ -145,12 +138,10 @@ router.delete('/:teamId', verifyToken, checkManager, async (req, res) => {
     }
 });
 
-// Route to add a player to a team
 router.post('/:teamId/players', verifyToken, async (req, res) => {
     try {
         const { teamId } = req.params;
 
-        // Check if team exists
         const team = await Team.findById(teamId);
         if (!team) return res.status(404).json({ error: "Team not found" });
 
@@ -174,24 +165,20 @@ router.post('/:teamId/players', verifyToken, async (req, res) => {
     }
 });
 
-// Route to add a schedule to a team
 router.post('/:teamId/schedules', verifyToken, async (req, res) => {
     try {
         const { teamId } = req.params;
 
-        // Check if the team exists
         const team = await Team.findById(teamId);
         if (!team) return res.status(404).json({ error: "Team not found" });
 
-        // Create the new schedule
         const newSchedule = new Schedule({
             ...req.body,
-            team: teamId, // Associate the schedule with the team
+            team: teamId,
         });
 
         await newSchedule.save();
 
-        // Optionally, add the schedule to the team's schedule array
         team.schedule.push(newSchedule._id);
         await team.save();
 

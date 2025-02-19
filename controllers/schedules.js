@@ -25,64 +25,84 @@ const checkTeamsAreDifferent = (home_team, away_team) => {
     }
 };
 
-// 1. Route to create a game for a specific team
+// 1. Route to create a new schedule
 router.post('/teams/:teamId/schedules', verifyToken, async (req, res) => {
     try {
         const { teamId } = req.params;
-        const { home_team, away_team, date } = req.body;
+        const { home_team, away_team, date, location, season } = req.body;
 
-        if (!home_team || !away_team || !date) {
-            return res.status(400).json({ error: "Home team, away team, and date are required" });
+        // Validate required fields
+        if (!home_team || !away_team || !date || !location) {
+            return res.status(400).json({ error: "Home team, away team, date, and location are required" });
         }
 
+        // Validate location value
+        if (!['home', 'away'].includes(location)) {
+            return res.status(400).json({ error: "Location must be 'home' or 'away'" });
+        }
+
+        // Validate date
         const parsedDate = validateDate(date);
         if (!parsedDate) return res.status(400).json({ error: "Invalid date format" });
 
-        // Check if the teams exist
+        // Check if teams exist (make sure you're using ObjectId correctly)
         const homeTeam = await checkTeamExists(home_team);
         const awayTeam = await checkTeamExists(away_team);
 
-        // Ensure home team and away team are different
+        // Ensure teams are different
         checkTeamsAreDifferent(home_team, away_team);
 
-        // Check if a game is already scheduled for this date
+        // Check if game already exists
         const existingGame = await Schedule.findOne({
-            home_team,
-            away_team,
-            date: parsedDate
-        });
-        if (existingGame) {
-            return res.status(400).json({ error: "A game between these teams is already scheduled for this date." });
-        }
-
-        // Ensure that the schedule being created belongs to the correct team (home_team or away_team)
-        if (home_team.toString() !== teamId && away_team.toString() !== teamId) {
-            return res.status(400).json({ error: "The schedule must belong to the specified team." });
-        }
-
-        const scheduleData = {
             home_team: home_team,
             away_team: away_team,
-            date: parsedDate,
-            arena: homeTeam.stadium,
-            city: homeTeam.city
-        };
+            date: parsedDate
+        });
+        if (existingGame) return res.status(400).json({ error: "Game already exists for this date." });
+
+        // Handle arena and city info
+        const arena = location === 'home' ? homeTeam.stadium : awayTeam.stadium;
+        const city = location === 'home' ? homeTeam.city : awayTeam.city;
 
         // Create the schedule
-        const schedule = await Schedule.create(scheduleData);
+        const schedule = await Schedule.create({
+            home_team,
+            away_team,
+            date: parsedDate,
+            arena,
+            city,
+            location,
+            season: season || 'Regular' // default season to 'Regular'
+        });
 
-        const populatedSchedule = await Schedule.findById(schedule._id)
-            .populate('home_team', 'name city stadium')
-            .populate('away_team', 'name city stadium');
-        
-        res.status(201).json(populatedSchedule);
+        // Update team schedules
+        homeTeam.schedule.push(schedule._id);
+        await homeTeam.save();
+
+        awayTeam.schedule.push(schedule._id);
+        await awayTeam.save();
+
+        // Return the created schedule
+        res.status(201).json(schedule);
+    } catch (err) {
+        console.error("Error creating schedule:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Route to get a single game schedule by ID
+router.get('/games/:id', async (req, res) => {
+    try {
+        const game = await Schedule.findById(req.params.id).populate('home_team away_team');
+        if (!game) return res.status(404).json({ error: 'Game not found' });
+        res.status(200).json(game);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// 2. Route to get all schedules
-router.get('/', async (req, res) => {
+// 3. Route to get all schedules
+router.get('/schedules', async (req, res) => {
     try {
         const schedules = await Schedule.find().populate('home_team away_team');
         res.status(200).json(schedules);
@@ -91,7 +111,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 3. Route to get a single schedule by ID
+// 4. Route to get a schedule by ID
 router.get('/:id', async (req, res) => {
     try {
         const schedule = await Schedule.findById(req.params.id).populate('home_team away_team');
@@ -102,13 +122,17 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// 4. Route to update a schedule
+// 5. Route to update a schedule
 router.put('/:id', verifyToken, async (req, res) => {
     try {
-        const { home_team, away_team, date } = req.body;
+        const { home_team, away_team, date, location, season } = req.body;
 
-        if (!home_team || !away_team || !date) {
-            return res.status(400).json({ error: 'Home team, away team, and date are required' });
+        if (!home_team || !away_team || !date || !location) {
+            return res.status(400).json({ error: 'Home team, away team, date, and location are required' });
+        }
+
+        if (!['home', 'away'].includes(location)) {
+            return res.status(400).json({ error: "Location must be 'home' or 'away'" });
         }
 
         const parsedDate = validateDate(date);
@@ -140,20 +164,22 @@ router.put('/:id', verifyToken, async (req, res) => {
         schedule.date = parsedDate;
         schedule.arena = homeTeam.stadium;
         schedule.city = homeTeam.city;
+        schedule.location = location; // Update location
+        schedule.season = season || schedule.season; // If no season provided, keep the current one
 
         await schedule.save();
 
         const populatedSchedule = await Schedule.findById(schedule._id)
             .populate('home_team', 'name city stadium')
             .populate('away_team', 'name city stadium');
-        
+
         res.status(200).json(populatedSchedule);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// 5. Route to delete a schedule
+// 6. Route to delete a schedule
 router.delete('/:id', verifyToken, async (req, res) => {
     try {
         const schedule = await Schedule.findById(req.params.id);
@@ -166,12 +192,18 @@ router.delete('/:id', verifyToken, async (req, res) => {
     }
 });
 
-// 6. Route to get a specific team with populated schedule
+// 7. Route to get a specific team with populated schedule
 router.get('/team/:id', async (req, res) => {
     try {
         const team = await Team.findById(req.params.id)
-            .populate('schedule')
-            .populate('manager')
+            .populate({
+                path: 'schedule',  // Populate the schedule field
+                populate: {
+                    path: 'home_team away_team',  // Ensure both home_team and away_team are populated
+                    select: 'name city stadium',  // Only select the required fields
+                }
+            })
+            .populate('manager')   // Optional: if you want to populate manager details too
             .exec();
 
         if (!team) return res.status(404).json({ error: 'Team not found.' });

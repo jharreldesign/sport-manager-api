@@ -50,7 +50,11 @@ const playerSchema = new mongoose.Schema(
             type: String,
             enum: ['Active', 'Injured', 'Inactive'],
             default: 'Active',  // Default to Active
-        }
+        },
+        headshot: {
+            type: String,
+            required: true,
+        },
     },
     { timestamps: true }
 );

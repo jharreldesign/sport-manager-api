@@ -1,4 +1,3 @@
-// npm
 const dotenv = require('dotenv');
 dotenv.config();
 const express = require('express');
@@ -19,11 +18,11 @@ const scheduleRouter = require('./controllers/schedules');
 mongoose.connect(process.env.MONGODB_URI);
 
 mongoose.connection.on('connected', () => {
-  console.log(`Connected to MongoDB ${mongoose.connection.name}.`);
+    console.log(`Connected to MongoDB ${mongoose.connection.name}.`);
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:5173' })); // Allow frontend requests
 app.use(express.json());
 app.use(logger('dev'));
 
@@ -37,5 +36,5 @@ app.use('/schedules', scheduleRouter);
 
 // Start the server and listen on port 3000
 app.listen(3000, () => {
-  console.log('The express app is ready!');
+    console.log('The express app is ready!');
 });
