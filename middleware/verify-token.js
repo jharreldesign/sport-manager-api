@@ -14,26 +14,34 @@ function verifyToken(req, res, next) {
       return res.status(401).json({ error: 'Malformed token.' });
     }
 
-    // Verify the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Verify the token and decode the payload
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) {
+        // Check for expired token
+        if (err.name === 'TokenExpiredError') {
+          return res.status(401).json({ error: 'Token has expired.' });
+        }
+        return res.status(401).json({ error: 'Invalid token.' });
+      }
 
-    // Ensure the decoded payload contains the user's _id
-    if (!decoded.payload || !decoded.payload._id) {
-      return res.status(401).json({ error: 'Invalid token payload.' });
-    }
+      // Ensure the decoded payload contains the user's _id and role
+      if (!decoded.payload || !decoded.payload._id || !decoded.payload.role) {
+        return res.status(401).json({ error: 'Invalid token payload.' });
+      }
 
-    // Attach the user data to the request object
-    req.user = decoded.payload;
+      // Attach the user data to the request object (including role)
+      req.user = decoded.payload;
 
-    // Log the decoded payload for debugging
-    console.log('Decoded Payload:', decoded.payload);
+      // Log the decoded payload for debugging (only in development environment)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Decoded Payload:', decoded.payload);
+      }
 
-    next();
+      next();
+    });
   } catch (err) {
     res.status(401).json({ error: 'Invalid token.' });
   }
 }
 
 module.exports = verifyToken;
-
-

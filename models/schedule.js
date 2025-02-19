@@ -43,15 +43,32 @@ const scheduleSchema = new mongoose.Schema(
     },
     location: {  // New field for home or away
       type: String,
-      enum: ['home', 'away'],
+      enum: ['home', 'away', 'neutral'],  // Added 'neutral' to support neutral site games
       required: true
+    },
+    created_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',  // Assuming 'User' model for admins/managers
+      required: true
+    },
+    updated_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',  // Assuming 'User' model for tracking updates
+    },
+    game_duration: {
+      type: Number,  // Optional: to store game duration in minutes
+      required: false
+    },
+    time_zone: {
+      type: String,  // Optional: to store the time zone for the game
+      required: false
     }
   },
   { timestamps: true }
 );
 
 // Optional: Index for optimization
-scheduleSchema.index({ home_team: 1, away_team: 1, date: 1 });
+scheduleSchema.index({ home_team: 1, away_team: 1, date: 1 }, { unique: true });
 
 // Create the Schedule model
 const Schedule = mongoose.model('Schedule', scheduleSchema);

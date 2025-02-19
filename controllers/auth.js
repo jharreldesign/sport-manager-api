@@ -9,19 +9,22 @@ const saltRounds = 12;
 
 router.post('/sign-up', async (req, res) => {
   try {
-    const userInDatabase = await User.findOne({ username: req.body.username });
+    const { username, password, role = 'user' } = req.body;
+
+    const userInDatabase = await User.findOne({ username });
     
     if (userInDatabase) {
-      return res.status(409).json({err: 'Username already taken.'});
+      return res.status(409).json({ err: 'Username already taken.' });
     }
     
+    const hashedPassword = bcrypt.hashSync(password, saltRounds);
     const user = await User.create({
-      username: req.body.username,
-      hashedPassword: bcrypt.hashSync(req.body.password, saltRounds)
+      username,
+      hashedPassword,
+      role // Allow setting the role to 'admin' or 'user'
     });
 
-    const payload = { username: user.username, _id: user._id };
-
+    const payload = { username: user.username, _id: user._id, role: user.role };
     const token = jwt.sign({ payload }, process.env.JWT_SECRET);
 
     res.status(201).json({ token });
@@ -44,7 +47,7 @@ router.post('/sign-in', async (req, res) => {
       return res.status(401).json({ err: 'Invalid credentials.' });
     }
 
-    const payload = { username: user.username, _id: user._id };
+    const payload = { username: user.username, _id: user._id, role: user.role };
 
     const token = jwt.sign({ payload }, process.env.JWT_SECRET);
 

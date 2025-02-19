@@ -16,7 +16,7 @@ const positions = [
     'Forward', 
     'Defender', 
     'Midfielder'
-]; // Example positions
+];
 
 const playerSchema = new mongoose.Schema(
     {
@@ -35,29 +35,47 @@ const playerSchema = new mongoose.Schema(
         player_number: {
             type: Number,
             required: true,
+            unique: true,  // Ensure player numbers are unique across the system
         },
         position: {
             type: String,
-            enum: positions,  // Enum for predefined positions
+            enum: positions, 
             required: true,
         },
         team: { 
             type: mongoose.Schema.Types.ObjectId, 
             ref: 'Team',
-            required: true,  // Ensures a team is assigned to the player
+            required: true,
         },
         status: {
             type: String,
             enum: ['Active', 'Injured', 'Inactive'],
-            default: 'Active',  // Default to Active
+            default: 'Active',
         },
         headshot: {
             type: String,
             required: true,
         },
+        created_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',  // Assuming 'User' model for admins/managers
+            required: true,
+        },
+        updated_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',  // Assuming 'User' model for tracking updates
+        },
+        // Optionally track when player data was updated (if needed)
+        updated_at: {
+            type: Date,
+            default: Date.now,
+        },
     },
     { timestamps: true }
 );
+
+// Add validation for player number uniqueness within the team
+playerSchema.index({ player_number: 1, team: 1 }, { unique: true });
 
 const Player = mongoose.model('Player', playerSchema);
 

@@ -14,15 +14,17 @@ const teamRouter = require('./controllers/teams');
 const playerRouter = require('./controllers/players');
 const scheduleRouter = require('./controllers/schedules');
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI);
-
-mongoose.connection.on('connected', () => {
+// MongoDB connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
     console.log(`Connected to MongoDB ${mongoose.connection.name}.`);
-});
+  })
+  .catch((err) => {
+    console.error("MongoDB connection error:", err.message);
+  });
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:5173' })); // Allow frontend requests
+app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' })); // Allow frontend requests
 app.use(express.json());
 app.use(logger('dev'));
 
@@ -34,7 +36,33 @@ app.use('/teams', teamRouter);
 app.use('/players', playerRouter);
 app.use('/schedules', scheduleRouter);
 
-// Start the server and listen on port 3000
-app.listen(3000, () => {
-    console.log('The express app is ready!');
+// Get the port from environment or default to 3000
+const port = process.env.PORT || 3000;
+
+// Start the server
+const server = app.listen(port, () => {
+  console.log(`The express app is ready on port ${port}!`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('SIGINT received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    mongoose.connection.close(() => {
+      console.log('MongoDB connection closed');
+      process.exit(0);
+    });
+  });
+});
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    mongoose.connection.close(() => {
+      console.log('MongoDB connection closed');
+      process.exit(0);
+    });
+  });
 });

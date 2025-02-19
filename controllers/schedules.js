@@ -36,9 +36,9 @@ router.post('/teams/:teamId/schedules', verifyToken, async (req, res) => {
             return res.status(400).json({ error: "Home team, away team, date, and location are required" });
         }
 
-        // Validate location value
-        if (!['home', 'away'].includes(location)) {
-            return res.status(400).json({ error: "Location must be 'home' or 'away'" });
+        // Validate location value - Allow 'neutral' as well
+        if (!['home', 'away', 'neutral'].includes(location)) {
+            return res.status(400).json({ error: "Location must be 'home', 'away', or 'neutral'" });
         }
 
         // Validate date
@@ -61,8 +61,8 @@ router.post('/teams/:teamId/schedules', verifyToken, async (req, res) => {
         if (existingGame) return res.status(400).json({ error: "Game already exists for this date." });
 
         // Handle arena and city info
-        const arena = location === 'home' ? homeTeam.stadium : awayTeam.stadium;
-        const city = location === 'home' ? homeTeam.city : awayTeam.city;
+        const arena = location === 'home' ? homeTeam.stadium : (location === 'away' ? awayTeam.stadium : "Neutral Site");
+        const city = location === 'home' ? homeTeam.city : (location === 'away' ? awayTeam.city : "Neutral City");
 
         // Create the schedule
         const schedule = await Schedule.create({
@@ -131,8 +131,8 @@ router.put('/:id', verifyToken, async (req, res) => {
             return res.status(400).json({ error: 'Home team, away team, date, and location are required' });
         }
 
-        if (!['home', 'away'].includes(location)) {
-            return res.status(400).json({ error: "Location must be 'home' or 'away'" });
+        if (!['home', 'away', 'neutral'].includes(location)) {
+            return res.status(400).json({ error: "Location must be 'home', 'away', or 'neutral'" });
         }
 
         const parsedDate = validateDate(date);
