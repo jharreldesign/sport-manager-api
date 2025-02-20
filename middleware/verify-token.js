@@ -17,6 +17,7 @@ function verifyToken(req, res, next) {
     // Verify the token and decode the payload
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {
+        console.error(err); // Log the error for debugging
         // Check for expired token
         if (err.name === 'TokenExpiredError') {
           return res.status(401).json({ error: 'Token has expired.' });
@@ -25,21 +26,22 @@ function verifyToken(req, res, next) {
       }
 
       // Ensure the decoded payload contains the user's _id and role
-      if (!decoded.payload || !decoded.payload._id || !decoded.payload.role) {
+      if (!decoded._id || !decoded.role) {
         return res.status(401).json({ error: 'Invalid token payload.' });
       }
 
       // Attach the user data to the request object (including role)
-      req.user = decoded.payload;
+      req.user = decoded;
 
       // Log the decoded payload for debugging (only in development environment)
       if (process.env.NODE_ENV === 'development') {
-        console.log('Decoded Payload:', decoded.payload);
+        console.log('Decoded Payload:', decoded);
       }
 
       next();
     });
   } catch (err) {
+    console.error(err);  // Log the error for debugging
     res.status(401).json({ error: 'Invalid token.' });
   }
 }

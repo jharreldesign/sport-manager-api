@@ -63,49 +63,49 @@ router.post(
 );
 
 // Route to get all players with pagination and optional search/filter
-router.get('/', verifyToken, async (req, res) => {
+router.get('/', async (req, res) => {  // Remove the `verifyToken` middleware here
     try {
-        const { page = 1, limit = 10, search, teamId, position } = req.query; // Handle search & filter
-        const skip = (page - 1) * limit;
-
-        const query = {};
-        if (search) {
-            query.$or = [
-                { first_name: { $regex: search, $options: 'i' } },
-                { last_name: { $regex: search, $options: 'i' } },
-            ];
-        }
-        if (teamId) {
-            query.team = teamId;
-        }
-        if (position) {
-            query.position = position;
-        }
-
-        // Fetch all players with pagination and populate 'team' field
-        const players = await Player.find(query)
-            .skip(skip)
-            .limit(limit)
-            .populate('team'); // Populate the team field
-
-        if (!players || players.length === 0) {
-            return res.status(404).json({ error: "No players found." });
-        }
-
-        const totalPlayers = await Player.countDocuments(query);
-        const totalPages = Math.ceil(totalPlayers / limit);
-
-        res.status(200).json({
-            players,
-            pagination: { page, limit, totalPages, totalPlayers }
-        });
+      const { page = 1, limit = 10, search, teamId, position } = req.query; // Handle search & filter
+      const skip = (page - 1) * limit;
+  
+      const query = {};
+      if (search) {
+        query.$or = [
+          { first_name: { $regex: search, $options: 'i' } },
+          { last_name: { $regex: search, $options: 'i' } },
+        ];
+      }
+      if (teamId) {
+        query.team = teamId;
+      }
+      if (position) {
+        query.position = position;
+      }
+  
+      // Fetch all players with pagination and populate 'team' field
+      const players = await Player.find(query)
+        .skip(skip)
+        .limit(limit)
+        .populate('team'); // Populate the team field
+  
+      if (!players || players.length === 0) {
+        return res.status(404).json({ error: "No players found." });
+      }
+  
+      const totalPlayers = await Player.countDocuments(query);
+      const totalPages = Math.ceil(totalPlayers / limit);
+  
+      res.status(200).json({
+        players,
+        pagination: { page, limit, totalPages, totalPlayers }
+      });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+      res.status(500).json({ error: err.message });
     }
-});
+  });  
 
-// Route to get player by ID
-router.get('/:playerId', verifyToken, async (req, res) => {
+// Route to get player by ID (modified to allow public access)
+router.get('/:playerId', async (req, res) => {
     try {
         const player = await Player.findById(req.params.playerId)
             .populate('team')

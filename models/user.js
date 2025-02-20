@@ -1,18 +1,19 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt'); // Add bcrypt for hashing and validation
 
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true,
-    unique: true, // Ensure username is unique across all users
-    trim: true, // Trim whitespace around the username
-    minlength: [3, 'Username must be at least 3 characters long'], // Optional: enforce a minimum length
+    unique: true,
+    trim: true,
+    minlength: [3, 'Username must be at least 3 characters long'],
   },
   email: {
     type: String,
     required: true,
-    unique: true,  // Ensure email is unique for user registration
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],  // Basic email format validation
+    unique: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
   },
   hashedPassword: {
     type: String,
@@ -20,31 +21,36 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'user', 'manager', 'coach'], // Expanded roles for potential growth
+    enum: ['admin', 'user', 'manager', 'coach'],
     default: 'user',
   },
   first_name: {
     type: String,
-    required: false, // Optional: user’s first name
+    required: false,
   },
   last_name: {
     type: String,
-    required: false, // Optional: user’s last name
+    required: false,
   },
-}, { timestamps: true }); // Add timestamps for better tracking
+}, { timestamps: true });
 
-// Ensure that sensitive data (like passwords) is not exposed in the API response
 userSchema.set('toJSON', {
   transform: (document, returnedObject) => {
-    // Remove hashed password from the response
-    delete returnedObject.hashedPassword;
-  }
+    delete returnedObject.hashedPassword; // Don't send the password in the response
+  },
 });
 
-// Optional: Adding a method for password validation if needed
-userSchema.methods.isValidPassword = function(password) {
-  // Implement password validation logic here (e.g., comparing hashed password)
-  return bcrypt.compareSync(password, this.hashedPassword);
+// Hash the password before saving the user to the database
+userSchema.pre('save', async function(next) {
+  if (this.isModified('hashedPassword')) {
+    this.hashedPassword = await bcrypt.hash(this.hashedPassword, 12); // Hash the password before saving
+  }
+  next();
+});
+
+// Password validation method (to be used in `auth.js` for login)
+userSchema.methods.isValidPassword = async function(password) {
+  return bcrypt.compare(password, this.hashedPassword); // Compare the hashed password
 };
 
 module.exports = mongoose.model('User', userSchema);

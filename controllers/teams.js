@@ -27,7 +27,7 @@ const checkManager = async (req, res, next) => {
     }
 };
 
-// Route to create a new team
+// Route to create a new team (requires authentication)
 router.post('/', verifyToken, async (req, res) => {
     try {
         req.body.manager = req.user._id;
@@ -45,8 +45,8 @@ router.post('/', verifyToken, async (req, res) => {
     }
 });
 
-// Route to get all teams with pagination and optional filtering
-router.get('/', verifyToken, async (req, res) => {
+// Route to get all teams with pagination and optional filtering (public route)
+router.get('/', async (req, res) => {
     try {
         const { page = 1, limit = 10, search } = req.query;
         const skip = (page - 1) * limit;
@@ -59,7 +59,6 @@ router.get('/', verifyToken, async (req, res) => {
             ];
         }
 
-        // Fetch all teams with pagination and populate related data
         const teams = await Team.find(query)
             .skip(skip)
             .limit(limit)
@@ -98,8 +97,8 @@ router.get('/', verifyToken, async (req, res) => {
     }
 });
 
-// Route to get team by ID
-router.get('/:teamId', verifyToken, async (req, res) => {
+// Route to get team by ID (public route)
+router.get('/:teamId', async (req, res) => {
     try {
         const team = await Team.findById(req.params.teamId)
             .populate({
@@ -130,7 +129,7 @@ router.get('/:teamId', verifyToken, async (req, res) => {
     }
 });
 
-// Route to update a team (only accessible by the manager)
+// Route to update a team (requires authentication and manager role)
 router.put("/:teamId", verifyToken, checkManager, async (req, res) => {
     try {
         const updatedTeam = await Team.findByIdAndUpdate(
@@ -150,7 +149,7 @@ router.put("/:teamId", verifyToken, checkManager, async (req, res) => {
     }
 });
 
-// Route to delete a team (only accessible by the manager)
+// Route to delete a team (requires authentication and manager role)
 router.delete('/:teamId', verifyToken, checkManager, async (req, res) => {
     try {
         const deletedTeam = await Team.findByIdAndDelete(req.params.teamId);
@@ -166,7 +165,7 @@ router.delete('/:teamId', verifyToken, checkManager, async (req, res) => {
     }
 });
 
-// Route to add a player to a team
+// Route to add a player to a team (requires authentication)
 router.post('/:teamId/players', verifyToken, async (req, res) => {
     try {
         const { teamId } = req.params;
@@ -174,7 +173,6 @@ router.post('/:teamId/players', verifyToken, async (req, res) => {
         const team = await Team.findById(teamId);
         if (!team) return res.status(404).json({ error: "Team not found" });
 
-        // Check if the player already exists in the team with the same number
         const existingPlayer = await Player.findOne({ team: teamId, player_number: req.body.player_number });
         if (existingPlayer) {
             return res.status(400).json({ error: "Player already exists in the team with the same number" });
@@ -195,7 +193,7 @@ router.post('/:teamId/players', verifyToken, async (req, res) => {
     }
 });
 
-// Route to add a schedule for a team
+// Route to add a schedule for a team (requires authentication)
 router.post('/:teamId/schedules', verifyToken, async (req, res) => {
     try {
         const { teamId } = req.params;
